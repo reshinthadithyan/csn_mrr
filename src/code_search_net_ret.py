@@ -99,14 +99,10 @@ if __name__ == '__main__':
     code_emb_list = []
     nl_emb_list = []
     for batch in tqdm(test_dataloader, total=int(candidate_size/args.batch_size)):
-        code, nl_desc = [], []
-        for ind in range(len(batch[0])):
-            code.append(batch[0][ind])
-            nl_desc.append(batch[1][ind])
-        print(len(code),len(nl_desc))
-        code = tokenizer(code, padding="max_length",
+        
+        code = tokenizer(list(batch[0]), padding="max_length",
                          truncation=True, return_tensors='pt').to(device)
-        nl_desc = tokenizer(nl_desc, padding="max_length",
+        nl_desc = tokenizer(list(batch[1]), padding="max_length",
                             truncation=True, return_tensors='pt').to(device)
 
         code_emb = model(code["input_ids"], code["attention_mask"])
@@ -114,6 +110,7 @@ if __name__ == '__main__':
         code_emb = mean_pooling(code_emb[0], code['attention_mask'])
         nl_emb = mean_pooling(nl_emb[0], nl_desc['attention_mask'])
         code_vecs = code_emb.cpu().detach()
+        print(code_vecs.size())
         nl_vecs = nl_emb.cpu().detach()
         code_emb_list.append(code_vecs)
         nl_emb_list.append(nl_emb)
