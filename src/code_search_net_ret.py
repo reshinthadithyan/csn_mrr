@@ -24,6 +24,8 @@ def load_dataset_for_eval(dataset_idt: str, subset: str, candidate_size: str = 1
     dataset = dataset.take(candidate_size)
     return dataset
 
+def squeeze_tree(tensor_data):
+    return {k: tensor_data[k].squeeze(0) for k in tensor_data}
 
 class RetDataset(Dataset):
     def __init__(self, dataset, tokenizer: AutoTokenizer):
@@ -37,11 +39,15 @@ class RetDataset(Dataset):
     def __getitem__(self, index: int):
         datapoint = self.dataset_list[index]
         code, nl_desc = datapoint["whole_func_string"], datapoint["func_documentation_string"]
+
+        code = squeeze_tree(tokenizer(code, padding="max_length",
+                         truncation=True, return_tensors='pt'))
+        nl_desc = squeeze_tree(tokenizer(nl_desc, padding="max_length",
+                            truncation=True, return_tensors='pt'))
         return code, nl_desc
 
 
-def squeeze_tree(tensor_data):
-    return {k: tensor_data[k].squeeze(1) for k in tensor_data}
+
 
 
 def mean_pooling(token_embeddings, mask):
@@ -99,18 +105,13 @@ if __name__ == '__main__':
     code_emb_list = []
     nl_emb_list = []
     for batch in tqdm(test_dataloader, total=int(candidate_size/args.batch_size)):
-        
-        code = tokenizer(list(batch[0]), padding="max_length",
-                         truncation=True, return_tensors='pt').to(device)
-        nl_desc = tokenizer(list(batch[1]), padding="max_length",
-                            truncation=True, return_tensors='pt').to(device)
+        code,nl_desc = batch[0],batch[1]
 
         code_emb = model(code["input_ids"], code["attention_mask"])
         nl_emb = model(nl_desc["input_ids"], nl_desc["attention_mask"])
         code_emb = mean_pooling(code_emb[0], code['attention_mask'])
         nl_emb = mean_pooling(nl_emb[0], nl_desc['attention_mask'])
         code_vecs = code_emb.cpu().detach()
-        print(code_vecs.size())
         nl_vecs = nl_emb.cpu().detach()
         code_emb_list.append(code_vecs)
         nl_emb_list.append(nl_emb)
