@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", type=str, default="code_search_net")
     parser.add_argument("--subset", type=str, default="python")
     parser.add_argument("--batch_size", type=int, default=4)
-    parser.add_argument("--candidate_size", type=int, default=100)
+    parser.add_argument("--candidate_size", type=int, default=10)
     parser.add_argument("--device", type=str, default="cpu")
 
     args = parser.parse_args()
@@ -100,9 +100,10 @@ if __name__ == '__main__':
     nl_emb_list = []
     for batch in tqdm(test_dataloader, total=int(candidate_size/args.batch_size)):
         code, nl_desc = [], []
-        for ind in batch:
-            code.append(ind[0])
-            nl_desc.append(ind[1])
+        for ind in range(len(batch[0])):
+            code.append(batch[0][ind])
+            nl_desc.append(batch[1][ind])
+        print(len(code),len(nl_desc))
         code = tokenizer(code, padding="max_length",
                          truncation=True, return_tensors='pt').to(device)
         nl_desc = tokenizer(nl_desc, padding="max_length",
@@ -130,5 +131,4 @@ if __name__ == '__main__':
             if i != j and scores[i, j] >= score:
                 rank += 1
         ranks.append(1/rank)
-        print(ranks)
     print('eval_mrr: ', float(np.mean(ranks)))
